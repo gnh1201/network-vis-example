@@ -130,7 +130,7 @@ if($format == "json.datatables") {
     $_rows = array();
     foreach($rows as $row) {
         foreach($row as $k=>$v) {
-            if(strlen($v) < 2) {
+            if($k != "pid" && strlen($v) < 2) {
                 $row[$k] = "Unknown";
             }
         }
