@@ -48,7 +48,6 @@ $_tbl1 = exec_db_temp_create(array(
    "hotfix_name" => array("varchar", 255),
    "datetime" => array("datetime"),
 ));
-$pfx_hf = array("K", "Q", "S");
 foreach($rows as $row) {
     $lines = split_by_line($row['response']);
     foreach($lines as $line) {
