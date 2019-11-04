@@ -11,6 +11,8 @@ $ua = $ne['agent'] . DOC_EOL;
 $jobargs = decode_colona_format($requests['_RAW']);
 $jobdata = decode_colona_format(base64_decode(get_value_in_array("DATA", $jobargs)));
 
+//write_common_log($requests['_RAW'], "api.agent.noarch");
+
 // get device
 $device = array();
 if(!array_key_empty("UUID", $jobargs)) {
