@@ -32,23 +32,47 @@ if(in_array("query", $_p)) {
 
     // get IPs by range
     $hostips = array();
+    $types = array("polystat"); // polystat is default
+    $severities = array();
     foreach($targets as $target) {
         switch($target->target) {
-            case "hostip":
+            case "hostips":
                 $hostips = array();
                 foreach($target->data as $v) {
                     $d = explode("*", $v);
                     $hostips[] = current($d);
                 }
                 break;
+            case "types":
+                $types = array();
+                foreach($target->data as $v) {
+                    $types[] = $v;
+                }
+                break;
+            case "severities":
+                $severities = array();
+                foreach($target->data as $v) {
+                    $severities[] = $v;
+                }
+                break;
         }
     }
 
     // get hosts by IP
-    $sql = "select * from $_tbl1 where 1";
+    $setwheres = array();
+    $_setwheres = array();
     foreach($hostips as $ip) {
-        $sql .= " or hostip like '{$ip}%'";
+        $_setwheres[] = array("or", array("eq", "hostip", $ip));
+        $_setwheres[] = array("or", array("left", "hostip", $ip));
     }
+    $setwheres[] = array("and", $_setwheres);
+
+    // make SQL statement
+    $sql = get_bind_to_sql_select($_tbl1, false, array(
+        "setwheres" => $setwheres
+    ));
+
+    // get rows
     $rows = exec_db_fetch_all($sql);
 
     // get problems
@@ -74,33 +98,69 @@ if(in_array("query", $_p)) {
         }
     }
 
-    // post-processing problems
-    $sql = "select hostid, hostname, max(severity) as severity from $_tbl2 group by hostid";
-    $rows = exec_db_fetch_all($sql);
-    $_rows = array();
-    foreach($rows as $row) {
-        $_rows[] = array_values($row);
+    // if panel type is polystat
+    if(in_array("polystat", $types)) {
+        // post-processing problems
+        $sql = "select hostid, hostname, max(severity) as severity from $_tbl2 group by hostid";
+        $rows = exec_db_fetch_all($sql, false, array(
+            "getvalues" => true
+        ));
+
+        foreach($rows as $row) {
+            $_data[] = array(
+                "target" => $row[1],
+                "datapoints" => array(
+                    array(intval($row[2]), get_current_datetime())
+                )
+            );
+        }
     }
 
-    // make output data
-    /*
-    $_data[] = array(
-        "columns" => array(
-            array("text" => "Hostid", "type" => "number"},
-            array("text" => "Hostname", "type" => "string"),
-            array("text" => "Severity", "type" => "number")
-        ),
-        "rows" => $_rows,
-        "type" => "table"
-    );
-    */
+    // if panel type is singlestat
+    if(in_array("singlestat", $types)) {
+        // post-processing problems
+        $sql = "select hostid, hostname, max(severity) as severity from $_tbl2 group by hostid";
+        $_tbl3 = exec_db_temp_start($sql);
 
-    foreach($_rows as $row) {
+        if(count($severities) > 0) {
+            $sql = sprintf("select concat('upper_', severity) as name, count(*) as lastvalue from $_tbl3 where severity in (%s) group by severity", implode(",", $severities));
+        } else {
+            $sql = "select concat('upper_', severity) as name, count(*) as lastvalue from $_tbl3";
+        }
+        $rows = exec_db_fetch_all($sql, false, array(
+            "getvalues" => true,
+            "display_errors" => true,
+            "show_debug" => true,
+            "show_sql" => true
+        ));
+
+        foreach($rows as $row) {
+            $_data[] = array(
+                "target" => $row[0],
+                "datapoints" => array(
+                    array(intval($row[1]), get_current_datetime())
+                )
+            );
+        }
+
+        exec_db_temp_end($_tbl3);
+    }
+
+    // if panel type is table
+    if(in_array("list", $types)) {
+        $sql = "select hostname, description, severity from $_tbl2";
+        $rows = exec_db_fetch_all($sql, false, array(
+            "getvalues" => true
+        ));
+
         $_data[] = array(
-            "target" => $row[1],
-            "datapoints" => array(
-                array(intval($row[2]), get_current_datetime())
-            )
+            "columns" => array(
+                array("text" => "Hostname", "type" => "text"),
+                array("text" => "Description", "type" => "text"),
+                array("text" => "Severity", "type" => "number")
+            ),
+            "rows" => $rows,
+            "type" => "table"
         );
     }
 }
