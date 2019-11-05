@@ -39,8 +39,7 @@ if(in_array("query", $_p)) {
             case "hostips":
                 $hostips = array();
                 foreach($target->data as $v) {
-                    $d = explode("*", $v);
-                    $hostips[] = current($d);
+                    $hostips[] = $v;
                 }
                 break;
             case "types":
@@ -63,7 +62,11 @@ if(in_array("query", $_p)) {
     $_setwheres = array();
     foreach($hostips as $ip) {
         $_setwheres[] = array("or", array("eq", "hostip", $ip));
-        $_setwheres[] = array("or", array("left", "hostip", $ip));
+
+        $d = explode("*", $ip);
+        if(count($d) > 1) {
+            $_setwheres[] = array("or", array("left", "hostip", $d[0]));
+        }
     }
     $setwheres[] = array("and", $_setwheres);
 
@@ -72,7 +75,11 @@ if(in_array("query", $_p)) {
         "setwheres" => $setwheres
     ));
 
+    // save rows to temporary table
+    $_tbl1_0 = exec_db_temp_start($sql, false);
+
     // get rows
+    $sql = get_bind_to_sql_select($_tbl1_0);
     $rows = exec_db_fetch_all($sql);
 
     // get problems
@@ -81,7 +88,9 @@ if(in_array("query", $_p)) {
         "eventid" => array("int", 11),
         "hostname" => array("varchar", 255),
         "description" => array("varchar", 255),
-        "severity" => array("int", 11)
+        "severity" => array("tinyint", 1),
+        "suppressed" => array("tinyint", 1),
+        "acknowledged" => array("tinyint", 1)
     ));
     foreach($rows as $row) {
         $problems = zabbix_get_problems($row['hostid']);
@@ -91,7 +100,9 @@ if(in_array("query", $_p)) {
                 "eventid" => $problem->eventid,
                 "hostname" => $row['hostname'],
                 "description" => $problem->name,
-                "severity" => $problem->severity
+                "severity" => $problem->severity,
+                "suppressed" => $problem->suppressed,
+                "acknowledged" => $problem->acknowledged
             );
             $sql = get_bind_to_sql_insert($_tbl2, $bind);
             exec_db_query($sql, $bind);
@@ -101,7 +112,7 @@ if(in_array("query", $_p)) {
     // if panel type is polystat
     if(in_array("polystat", $types)) {
         // post-processing problems
-        $sql = "select hostid, hostname, max(severity) as severity from $_tbl2 group by hostid";
+        $sql = "select a.hostid as hostid, a.hostname as hostname, max(b.severity) as severity from $_tbl1_0 a left join $_tbl2 b on a.hostid = b.hostid group by a.hostid";
         $rows = exec_db_fetch_all($sql, false, array(
             "getvalues" => true
         ));
@@ -157,7 +168,9 @@ if(in_array("query", $_p)) {
             "columns" => array(
                 array("text" => "Hostname", "type" => "text"),
                 array("text" => "Description", "type" => "text"),
-                array("text" => "Severity", "type" => "number")
+                array("text" => "Severity", "type" => "number"),
+                //array("text" => "Suppressed", "type" => "number"),
+                //array("text" => "Acknowledged", "type" => "number")
             ),
             "rows" => $rows,
             "type" => "table"
