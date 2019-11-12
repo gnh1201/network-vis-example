@@ -32,6 +32,7 @@ if(in_array("query", $_p)) {
 
     // get IPs by range
     $hostips = array();
+    $hostnames = array();
     $types = array("polystat"); // polystat is default
     $severities = array();
     foreach($targets as $target) {
@@ -42,6 +43,11 @@ if(in_array("query", $_p)) {
                     $hostips[] = $v;
                 }
                 break;
+            case "hostnames":
+                $hostnames = array();
+                foreach($targets->data as $v) {
+                    $hostnames[] = $v;
+                }
             case "types":
                 $types = array();
                 foreach($target->data as $v) {
@@ -54,6 +60,11 @@ if(in_array("query", $_p)) {
                     $severities[] = $v;
                 }
                 break;
+            default:
+                $d = explode(".", $target->target);
+                if($d[0] == "hostname") {
+                    $hostnames[] = $d[1];
+                }
         }
     }
 
@@ -66,6 +77,14 @@ if(in_array("query", $_p)) {
         $d = explode("*", $ip);
         if(count($d) > 1) {
             $_setwheres[] = array("or", array("left", "hostip", $d[0]));
+        }
+    }
+    foreach($hostnames as $name) {
+        $_setwheres[] = array("or", array("eq", "hostname", $name));
+
+        $d = explode("*", $name);
+        if(count($d) > 1) {
+            $_setwheres[] = array("or", array("left", "hostname", $d[0]));
         }
     }
     $setwheres[] = array("and", $_setwheres);
@@ -82,6 +101,7 @@ if(in_array("query", $_p)) {
     $sql = get_bind_to_sql_select($_tbl1_0);
     $rows = exec_db_fetch_all($sql);
 
+/*
     // get problems
     $_tbl2 = exec_db_temp_create(array(
         "hostid" => array("int", 11),
@@ -90,7 +110,8 @@ if(in_array("query", $_p)) {
         "description" => array("varchar", 255),
         "severity" => array("tinyint", 1),
         "suppressed" => array("tinyint", 1),
-        "acknowledged" => array("tinyint", 1)
+        "acknowledged" => array("tinyint", 1),
+        "debug" => array("text")
     ));
     foreach($rows as $row) {
         $problems = zabbix_get_problems($row['hostid']);
@@ -102,7 +123,32 @@ if(in_array("query", $_p)) {
                 "description" => $problem->name,
                 "severity" => $problem->severity,
                 "suppressed" => $problem->suppressed,
-                "acknowledged" => $problem->acknowledged
+                "acknowledged" => $problem->acknowledged,
+                "debug" => json_encode($problem)
+            );
+            $sql = get_bind_to_sql_insert($_tbl2, $bind);
+            exec_db_query($sql, $bind);
+        }
+    }
+*/
+
+    // get triggers
+    $_tbl2 = exec_db_temp_create(array(
+        "hostid" => array("int", 11),
+        "hostname" => array("varchar", 255),
+        "description" => array("varchar", 255),
+        "severity" => array("tinyint", 1),
+        //"debug" => array("text")
+    ));
+    foreach($rows as $row) {
+        $triggers = zabbix_get_triggers($row['hostid']);
+        foreach($triggers as $trigger) {
+            $bind = array(
+                "hostid" => $row['hostid'],
+                "hostname" => $row['hostname'],
+                "description" => $trigger->description,
+                "severity" => $trigger->priority,
+                //"debug" => json_encode($trigger),
             );
             $sql = get_bind_to_sql_insert($_tbl2, $bind);
             exec_db_query($sql, $bind);
@@ -157,6 +203,7 @@ if(in_array("query", $_p)) {
 
     // if panel type is table
     if(in_array("list", $types)) {
+        //$sql = "select hostname, description, severity, debug from $_tbl2";
         $sql = "select hostname, description, severity from $_tbl2";
         $rows = exec_db_fetch_all($sql, false, array(
             "getvalues" => true
@@ -168,7 +215,8 @@ if(in_array("query", $_p)) {
                 array("text" => "Description", "type" => "text"),
                 array("text" => "Severity", "type" => "number"),
                 //array("text" => "Suppressed", "type" => "number"),
-                //array("text" => "Acknowledged", "type" => "number")
+                //array("text" => "Acknowledged", "type" => "number"),
+                //array("text" => "Debug", "type" => "number")
             ),
             "rows" => $rows,
             "type" => "table"
