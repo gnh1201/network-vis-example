@@ -20,7 +20,7 @@ if(in_array("query", $_p)) {
         "hostname" => array("varchar", 255),
         "hostip" => array("varchar", 255)
     ));
-    foreach($hosts->result as $host) {
+    foreach($hosts as $host) {
         $bind = array(
             "hostid" => $host->hostid,
             "hostname" => $host->host,
@@ -94,7 +94,7 @@ if(in_array("query", $_p)) {
     ));
     foreach($rows as $row) {
         $problems = zabbix_get_problems($row['hostid']);
-        foreach($problems->result as $problem) {
+        foreach($problems as $problem) {
             $bind = array(
                 "hostid" => $row['hostid'],
                 "eventid" => $problem->eventid,
@@ -130,7 +130,8 @@ if(in_array("query", $_p)) {
     // if panel type is singlestat
     if(in_array("singlestat", $types)) {
         // post-processing problems
-        $sql = "select hostid, hostname, max(severity) as severity from $_tbl2 group by hostid";
+        //$sql = "select hostid, hostname, max(severity) as severity from $_tbl2 group by hostid";
+        $sql = "select a.hostid as hostid, a.hostname as hostname, max(b.severity) as severity from $_tbl1_0 a left join $_tbl2 b on a.hostid = b.hostid group by a.hostid";
         $_tbl3 = exec_db_temp_start($sql);
 
         if(count($severities) > 0) {
@@ -139,10 +140,7 @@ if(in_array("query", $_p)) {
             $sql = "select concat('upper_', severity) as name, count(*) as lastvalue from $_tbl3";
         }
         $rows = exec_db_fetch_all($sql, false, array(
-            "getvalues" => true,
-            "display_errors" => true,
-            "show_debug" => true,
-            "show_sql" => true
+            "getvalues" => true
         ));
 
         foreach($rows as $row) {
