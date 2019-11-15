@@ -21,7 +21,7 @@ if(empty($end_dt)) {
 if(empty($start_dt)) {
     $start_dt = get_current_datetime(array(
         "now" => $end_dt,
-        "adjust" => "-1 hour"
+        "adjust" => "-24 hours"
     ));
 }
 
@@ -38,13 +38,14 @@ foreach($response->data as $row) {
         "id" => get_hashed_text($row->hotfix_id),
         "content" => $row->hotfix_id,
         "start" => substr($row->datetime, 0, 10),
-        "tooltip" => $row->hotfix_name,
+        "tooltip" => $row->hotfix_name
     );
-    $data['map0'] = write_storage_file(json_encode_ex($map0), array(
-        "url" => true,
-        "extension" => "json"
-    ));
 }
+$data['map0'] = write_storage_file(json_encode_ex($map0), array(
+    "storage_type" => "temp",
+    "url" => true,
+    "extension" => "json"
+));
 
 $tbl0 = array();
 foreach($response->data as $row) {
@@ -54,13 +55,22 @@ foreach($response->data as $row) {
        "hotfix_id" => $row->hotfix_id,
        "hotfix_name" => $row->hotfix_name
     );
+
     $data['tbl0'] = write_storage_file(json_encode_ex(array(
         "data" => $tbl0
     )), array(
+        "storage_type" => "temp",
         "url" => true,
         "extension" => "json"
     ));
 }
+$data['tbl0'] = write_storage_file(json_encode_ex(array(
+    "data" => $tbl0
+)), array(
+    "storage_type" => "temp",
+    "url" => true,
+    "extension" => "json"
+));
 
 // make javascript content
 $jscontent = <<<EOF
@@ -94,6 +104,7 @@ EOF;
 $jsloader = new JSLoader();
 $jsloader->add_scripts("https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-timeline-graph2d.min.js");
 $jsloader->add_scripts(write_storage_file($jscontent, array(
+    "storage_type" => "temp",
     "url" => true,
     "extension" => "js"
 )));
