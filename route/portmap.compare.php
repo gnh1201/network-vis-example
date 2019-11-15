@@ -43,7 +43,10 @@ $response = get_web_page(base_url(), "get", array(
     "start_dt" => $start_dt0,
     "end_dt" => $end_dt0
 ));
-$data['map0'] = write_storage_file($response['content']);
+$data['map0'] = write_storage_file($response['content'], array(
+    "storage_type" => "temp",
+    "url" => true
+));
 
 // before (table)
 $response = get_web_page(base_url(), "get", array(
@@ -53,7 +56,10 @@ $response = get_web_page(base_url(), "get", array(
     "end_dt" => $end_dt0,
     "format" => "json.datatables"
 ));
-$data['tbl0'] = write_storage_file($response['content']);
+$data['tbl0'] = write_storage_file($response['content'], array(
+    "storage_type" => "temp",
+    "url" => true
+));
 
 // after
 $response = get_web_page(base_url(), "get", array(
@@ -62,7 +68,10 @@ $response = get_web_page(base_url(), "get", array(
     "start_dt" => $start_dt1,
     "end_dt" => $end_dt1
 ));
-$data['map1'] = write_storage_file($response['content']);
+$data['map1'] = write_storage_file($response['content'], array(
+    "storage_type" => "temp",
+    "url" => true
+));
 
 // after (table)
 $response = get_web_page(base_url(), "get", array(
@@ -72,7 +81,10 @@ $response = get_web_page(base_url(), "get", array(
     "end_dt" => $end_dt1,
     "format" => "json.datatables"
 ));
-$data['tbl1'] = write_storage_file($response['content']);
+$data['tbl1'] = write_storage_file($response['content'], array(
+    "storage_type" => "temp",
+    "url" => true
+));
 
 // make javascript
 $jscontent = <<<EOF
@@ -171,13 +183,16 @@ $jscontent = <<<EOF
 EOF;
 $jsloader = new JSLoader();
 $jsloader->add_scripts("https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis-network.min.js");
-$jsloader->add_scripts(write_storage_file($jscontent));
+$jsloader->add_scripts(write_storage_file($jscontent, array(
+    "storage_type" => "temp",
+    "url" => true
+)));
 $data['jsoutput'] = $jsloader->get_output();
 
 $data['device_id'] = $device_id;
 $data['before_dt'] = $before_dt;
 $data['after_dt'] = $after_dt;
 
-renderView("templates/adminlte2/header", $data);
+//renderView("templates/adminlte2/header", $data);
 renderView("view_portmap.compare", $data);
-renderView("templates/adminlte2/footer", $data);
+//renderView("templates/adminlte2/footer", $data);
