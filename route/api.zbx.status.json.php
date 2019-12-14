@@ -138,16 +138,28 @@ if(in_array("query", $_p)) {
         "hostname" => array("varchar", 255),
         "description" => array("varchar", 255),
         "severity" => array("tinyint", 1),
+        "timestamp" => array("varchar", 255)
         //"debug" => array("text")
     ));
     foreach($rows as $row) {
         $triggers = zabbix_get_triggers($row['hostid']);
+        $alerts = zabbix_get_alerts($row['hostid']);
+
         foreach($triggers as $trigger) {
+            $_timestamp = get_current_timestamp();
+            foreach($alerts as $alert) {
+                if($alert->name == $trigger->description) {
+                    $_timestamp = $alert->clock;
+                    break;
+                }
+            }
+
             $bind = array(
                 "hostid" => $row['hostid'],
                 "hostname" => $row['hostname'],
                 "description" => $trigger->description,
                 "severity" => $trigger->priority,
+                "timestamp" => date($config['timeformat'], intval($_timestamp)),
                 //"debug" => json_encode($trigger),
             );
             $sql = get_bind_to_sql_insert($_tbl2, $bind);
@@ -203,8 +215,8 @@ if(in_array("query", $_p)) {
 
     // if panel type is table
     if(in_array("list", $types)) {
-        //$sql = "select hostname, description, severity, debug from $_tbl2";
-        $sql = "select hostname, description, severity from $_tbl2";
+        //$sql = "select hostname, description, severity, timestamp, debug from $_tbl2";
+        $sql = "select hostname, description, severity, timestamp from $_tbl2";
         $rows = exec_db_fetch_all($sql, false, array(
             "getvalues" => true
         ));
@@ -214,6 +226,7 @@ if(in_array("query", $_p)) {
                 array("text" => "Hostname", "type" => "text"),
                 array("text" => "Description", "type" => "text"),
                 array("text" => "Severity", "type" => "number"),
+                array("text" => "Timestamp", "type" => "timestamp"),
                 //array("text" => "Suppressed", "type" => "number"),
                 //array("text" => "Acknowledged", "type" => "number"),
                 //array("text" => "Debug", "type" => "number")
