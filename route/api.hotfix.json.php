@@ -52,11 +52,7 @@ if($mode == "background") {
     $rows = exec_db_fetch_all($sql);
 
     // end of life
-    $EOLs = array(
-        "winxp" => "2014-04-08",
-        "win7" => "2020-01-14"
-    );
-
+    $EOLs = array("2014-03-02", "2019-03-02");
     foreach($rows as $row) {
         $terms = explode(",", $row['terms']);
         
@@ -82,15 +78,18 @@ if($mode == "background") {
                 if(in_array($c1, array("K", "Q", "{"))) {
                     $name =  $term;
                 }
-                if($c1 == "Q" && $name == "Unknown") {
-                    $date = $EOLs['winxp'];
+                if($date == "0000-00-00" && $c1 == "Q") {
+                    $date = $EOLs[0];
                 }
             }
         }
 
-        // Windows XP end of life: 2014-04-08
-        if($date == "0000-00-00" && in_array("XP", $terms)) {
-            $date = $EOLs['winxp'];
+        if($date == "0000-00-00") {
+            if(in_array("XP", $terms)) {
+                $date = $EOLs[0];
+            } else {
+                $date = $EOLs[1];
+            }
         }
 
         $bind = array(
