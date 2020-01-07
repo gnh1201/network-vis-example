@@ -75,7 +75,8 @@ if($mode == "background") {
             } elseif(strlen($term) == 8 && ctype_digit($term)) {
                 $date = sprintf("%02d-%02d-%02d", substr($term, 0, 4), substr($term, 4, 2), substr($term, 6, 2));
             } elseif(strlen($term) == 16) {
-                $date = $EOLs['win7']; // Windows 7 end of life: 2020-01-14
+                // https://superuser.com/questions/1515297/what-is-the-time-format-like-01d15614cbaee92c-in-windows-hotfixes
+                $date = date("Y-m-d", intval(substr(hex2dec($term), 0, -8)));
             } else {
                 $c1 = substr($term, 0, 1);
                 if(in_array($c1, array("K", "Q", "{"))) {
@@ -88,10 +89,8 @@ if($mode == "background") {
         }
 
         // Windows XP end of life: 2014-04-08
-        if($date == "0000-00-00") {
-            if(in_array("XP", $terms)) {
-                $date = $EOLs['winxp'];
-            }
+        if($date == "0000-00-00" && in_array("XP", $terms)) {
+            $date = $EOLs['winxp'];
         }
 
         $bind = array(
